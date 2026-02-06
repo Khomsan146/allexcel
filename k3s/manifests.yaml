@@ -25,9 +25,9 @@ spec:
     spec:
       containers:
         - name: link-dashboard
-          # Replace with your actual image tag e.g. <your-registry>/link-dashboard:latest
-          image: allexel:1.1
-          imagePullPolicy: IfNotPresent
+          # Using GitHub Container Registry
+          image: ghcr.io/khomsan146/allexcel:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
@@ -36,6 +36,9 @@ spec:
           volumeMounts:
             - name: data-volume
               mountPath: "/data"
+      # Uncomment if your repo is Private
+      # imagePullSecrets:
+      #   - name: ghcr-secret
       volumes:
         - name: data-volume
           persistentVolumeClaim:
@@ -57,7 +60,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: link-dashboard-ingress
+  annotations:
+    konghq.com/strip-path: "true" # Common Kong annotation, adjust if needed
 spec:
+  ingressClassName: kong
   rules:
     - http:
         paths:
