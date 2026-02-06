@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/tfac-frontend-Infra-allapp.git" # Replace with actual URL if different
-    targetRevision: pord # Assuming 'pord' is the branch name as requested
+    repoURL: "https://github.com/Khomsan146/allexcel.git"
+    targetRevision: pord
     path: k3s # Directory containing manifests
   destination:
     server: "https://kubernetes.default.svc"
