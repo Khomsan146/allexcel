@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: link-dashboard
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/tfac-frontend-Infra-allapp.git" # Replace with actual URL if different
+    targetRevision: pord # Assuming 'pord' is the branch name as requested
+    path: k3s # Directory containing manifests
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
