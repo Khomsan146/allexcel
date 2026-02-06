@@ -1,18 +1,35 @@
+# -------------------------------
+# Namespace (แนะนำ แยกชัดเจน)
+# -------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: link-dashboard
+---
+# -------------------------------
+# PersistentVolumeClaim
+# -------------------------------
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: link-dashboard-pvc
+  namespace: link-dashboard
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: local-path   # สำคัญมากสำหรับ K3s
   resources:
     requests:
       storage: 1Gi
 ---
+# -------------------------------
+# Deployment
+# -------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: link-dashboard
+  namespace: link-dashboard
 spec:
   replicas: 1
   selector:
@@ -23,48 +40,77 @@ spec:
       labels:
         app: link-dashboard
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret   # ใช้ได้ทั้ง public / private
       containers:
-      - name: link-dashboard
-        # Replace with your actual image tag e.g. <your-registry>/link-dashboard:latest
-        image: link-dashboard:latest 
-        imagePullPolicy: IfNotPresent 
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DB_PATH
-          value: "/data/links.db"
-        volumeMounts:
-        - name: data-volume
-          mountPath: "/data"
+        - name: link-dashboard
+          image: ghcr.io/khomsan146/allexcel:1.1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_PATH
+              value: "/data/links.db"
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
       volumes:
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: link-dashboard-pvc
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: link-dashboard-pvc
 ---
+# -------------------------------
+# Service
+# -------------------------------
 apiVersion: v1
 kind: Service
 metadata:
   name: link-dashboard-svc
+  namespace: link-dashboard
 spec:
   selector:
     app: link-dashboard
   ports:
-    - protocol: TCP
-      port: 80
+    - port: 80
       targetPort: 3000
 ---
+# -------------------------------
+# Ingress (Traefik / K3s)
+# -------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: link-dashboard-ingress
+  namespace: link-dashboard
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: link-dashboard-svc
-            port:
-              number: 80
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: link-dashboard-svc
+                port:
+                  number: 80
