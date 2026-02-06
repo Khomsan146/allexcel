@@ -24,22 +24,22 @@ spec:
         app: link-dashboard
     spec:
       containers:
-      - name: link-dashboard
-        # Replace with your actual image tag e.g. <your-registry>/link-dashboard:latest
-        image: link-dashboard:latest 
-        imagePullPolicy: IfNotPresent 
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DB_PATH
-          value: "/data/links.db"
-        volumeMounts:
-        - name: data-volume
-          mountPath: "/data"
+        - name: link-dashboard
+          # Replace with your actual image tag e.g. <your-registry>/link-dashboard:latest
+          image: allexel:1.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_PATH
+              value: "/data/links.db"
+          volumeMounts:
+            - name: data-volume
+              mountPath: "/data"
       volumes:
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: link-dashboard-pvc
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: link-dashboard-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -59,12 +59,12 @@ metadata:
   name: link-dashboard-ingress
 spec:
   rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: link-dashboard-svc
-            port:
-              number: 80
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: link-dashboard-svc
+                port:
+                  number: 80
