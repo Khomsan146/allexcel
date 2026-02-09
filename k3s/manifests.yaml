@@ -1,8 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra-list
+
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: link-dashboard-pvc
-  namespace: default
+  namespace: infra-list
 spec:
   accessModes:
     - ReadWriteOnce
@@ -15,7 +20,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: link-dashboard
-  namespace: default
+  namespace: infra-list
 spec:
   replicas: 1
   selector:
@@ -69,7 +74,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: link-dashboard-svc
-  namespace: default
+  namespace: infra-list
 spec:
   selector:
     app: link-dashboard
@@ -85,7 +90,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: link-dashboard-ingress
-  namespace: default
+  namespace: infra-list
   annotations:
     konghq.com/strip-path: "true"
 spec:
