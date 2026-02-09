@@ -1,5 +1,5 @@
 # -------------------------------
-# Namespace (แนะนำ แยกชัดเจน)
+# Namespace
 # -------------------------------
 apiVersion: v1
 kind: Namespace
@@ -7,7 +7,7 @@ metadata:
   name: link-dashboard
 ---
 # -------------------------------
-# PersistentVolumeClaim
+# PersistentVolumeClaim (Longhorn)
 # -------------------------------
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,7 +17,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path   # สำคัญมากสำหรับ K3s
+  storageClassName: longhorn
   resources:
     requests:
       storage: 1Gi
@@ -40,27 +40,25 @@ spec:
       labels:
         app: link-dashboard
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret   # ใช้ได้ทั้ง public / private
       containers:
         - name: link-dashboard
           image: ghcr.io/khomsan146/allexcel:1.1
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
           env:
             - name: DB_PATH
-              value: "/data/links.db"
+              value: /data/links.db
           volumeMounts:
             - name: data-volume
               mountPath: /data
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: "500m"
-              memory: "256Mi"
+              cpu: 500m
+              memory: 256Mi
           readinessProbe:
             httpGet:
               path: /
@@ -90,11 +88,12 @@ spec:
   selector:
     app: link-dashboard
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 3000
 ---
 # -------------------------------
-# Ingress (Traefik / K3s)
+# Ingress (Kong)
 # -------------------------------
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -102,10 +101,15 @@ metadata:
   name: link-dashboard-ingress
   namespace: link-dashboard
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
+    konghq.com/strip-path: "true"
+    konghq.com/protocols: "https"
+    konghq.com/force-ssl-redirect: "true"
+    konghq.com/https-redirect-status-code: "301"
 spec:
+  ingressClassName: kong
   rules:
-    - http:
+    - host: mornitor.tfac.or.th
+      http:
         paths:
           - path: /
             pathType: Prefix
