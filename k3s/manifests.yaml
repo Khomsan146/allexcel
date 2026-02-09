@@ -1,14 +1,3 @@
-# -------------------------------
-# Namespace
-# -------------------------------
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: link-dashboard
----
-# -------------------------------
-# PersistentVolumeClaim (Longhorn)
-# -------------------------------
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -21,10 +10,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
----
-# -------------------------------
 # Deployment
-# -------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -78,9 +64,7 @@ spec:
           persistentVolumeClaim:
             claimName: link-dashboard-pvc
 ---
-# -------------------------------
 # Service
-# -------------------------------
 apiVersion: v1
 kind: Service
 metadata:
@@ -104,16 +88,13 @@ metadata:
   namespace: link-dashboard
   annotations:
     konghq.com/strip-path: "true"
-    konghq.com/protocols: "https"
-    konghq.com/force-ssl-redirect: "true"
-    konghq.com/https-redirect-status-code: "301"
 spec:
   ingressClassName: kong
   rules:
-    - host: mornitor.tfac.or.th
+    - host: monitor.tfac.or.th
       http:
         paths:
-          - path: /
+          - path: /checklist
             pathType: Prefix
             backend:
               service:
