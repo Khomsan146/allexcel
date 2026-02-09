@@ -40,6 +40,8 @@ spec:
       labels:
         app: link-dashboard
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: link-dashboard
           image: ghcr.io/khomsan146/allexcel:1.1
