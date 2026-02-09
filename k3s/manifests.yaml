@@ -1,8 +1,14 @@
+# ===============================
+# Namespace
+# ===============================
 apiVersion: v1
 kind: Namespace
 metadata:
   name: infra-list
-
+---
+# ===============================
+# PersistentVolumeClaim
+# ===============================
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -15,7 +21,10 @@ spec:
   resources:
     requests:
       storage: 1Gi
+---
+# ===============================
 # Deployment
+# ===============================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +42,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-secret
+      terminationGracePeriodSeconds: 10
       containers:
         - name: link-dashboard
           image: ghcr.io/khomsan146/allexcel:1.1
@@ -64,12 +74,17 @@ spec:
               port: 3000
             initialDelaySeconds: 15
             periodSeconds: 20
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
       volumes:
         - name: data-volume
           persistentVolumeClaim:
             claimName: link-dashboard-pvc
 ---
+# ===============================
 # Service
+# ===============================
 apiVersion: v1
 kind: Service
 metadata:
@@ -83,9 +98,9 @@ spec:
       port: 80
       targetPort: 3000
 ---
-# -------------------------------
+# ===============================
 # Ingress (Kong)
-# -------------------------------
+# ===============================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
