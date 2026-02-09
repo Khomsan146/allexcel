@@ -85,7 +85,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: link-dashboard-ingress
-  namespace: link-dashboard
+  namespace: default
   annotations:
     konghq.com/strip-path: "true"
 spec:
