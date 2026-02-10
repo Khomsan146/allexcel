@@ -1,8 +1,10 @@
 :root {
   --bg-deep: #0a0b14;
-  --card-bg: #1e2532;
-  --card-hover: #262e3e;
-  --text-main: #ffffff;
+  --bg-gradient-start: #0f172a;
+  --bg-gradient-end: #1e1b4b;
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --card-hover: rgba(51, 65, 85, 0.8);
+  --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --accent: #3b82f6;
   --danger: #ef4444;
@@ -15,8 +17,11 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Kanit', 'Sarabun', -apple-system, sans-serif;
   background-color: var(--bg-deep);
+  background: radial-gradient(circle at top left, var(--bg-gradient-start), var(--bg-deep)),
+    radial-gradient(circle at bottom right, var(--bg-gradient-end), var(--bg-deep));
+  background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
 }
@@ -67,6 +72,7 @@ body {
   color: white;
   margin-bottom: 2rem;
   font-size: 1rem;
+  backdrop-filter: blur(10px);
 }
 
 /* Minimalism Grid - 5 Columns */
@@ -116,7 +122,9 @@ body {
   position: relative;
   transition: all 0.2s;
   min-height: 180px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .card:hover {
@@ -129,7 +137,8 @@ body {
 .card-title {
   font-size: 2.2rem;
   /* Extra Large */
-  font-weight: 800;
+  font-weight: 600;
+  /* Adjusted weight for Kanit */
   margin-bottom: 0.75rem;
   line-height: 1.2;
 }
@@ -139,6 +148,7 @@ body {
   color: var(--text-muted);
   opacity: 0.8;
   max-width: 90%;
+  font-weight: 300;
 }
 
 .delete-btn {
@@ -170,6 +180,7 @@ body {
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 table {
@@ -183,7 +194,10 @@ th {
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
 }
 
 td {
@@ -202,21 +216,22 @@ tr:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
 }
 
 .modal {
-  background: #1a1b26;
+  background: #1e293b;
   padding: 2.5rem;
   border-radius: 20px;
   width: 100%;
   max-width: 600px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .form-group {
@@ -228,24 +243,27 @@ label {
   margin-bottom: 0.5rem;
   color: var(--text-muted);
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 input,
 textarea,
 select {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.8rem 1rem;
   border-radius: 10px;
   color: white;
   font-size: 1rem;
+  font-family: inherit;
 }
 
 input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .btn {
@@ -255,18 +273,27 @@ textarea:focus {
   cursor: pointer;
   border: none;
   font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s;
 }
 
 .btn-primary {
   background: var(--accent);
   color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-primary:hover {
   background: #2563eb;
+  transform: translateY(-1px);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--text-muted);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
 }

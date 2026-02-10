@@ -111,7 +111,7 @@ export default function App() {
     <main className="container">
       <header className="header">
         <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          {activeTab === 'monitoring' ? 'System Monitor' : activeTab === 'checklist' ? 'Daily Checklist' : 'Vendor Contracts'}
+          {activeTab === 'monitoring' ? 'System Monitor' : activeTab === 'checklist' ? 'All Check list' : 'Vendor Contracts'}
         </h1>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add New
