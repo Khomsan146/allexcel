@@ -105,6 +105,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: link-dashboard-svc
+  namespace: infra-list
   annotations:
     konghq.com/strip-path: 'true'
     kubernetes.io/ingress.class: kong
