@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trash2, Plus, X, Search, User, Mail, Phone, Calendar, ExternalLink } from 'lucide-react';
+import { Trash2, Plus, X, Search, User, Mail, Phone, Calendar, ExternalLink, Grid, List as ListIcon, Edit2 } from 'lucide-react';
 
 type Tab = 'monitoring' | 'checklist' | 'contract';
+type ViewMode = 'list' | 'grid';
 
 interface Item {
   id: string;
@@ -35,10 +36,12 @@ const COLORS = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('monitoring');
+  const [viewMode, setViewMode] = useState<ViewMode>('list'); // Default per user request/flow? Let's default to list as it's cleaner for many items
   const [items, setItems] = useState<Item[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [itemForm, setItemForm] = useState({ title: '', url: '', note: '', color: COLORS[0] });
   const [vendorForm, setVendorForm] = useState({
@@ -74,26 +77,68 @@ export default function App() {
     } catch (err) { console.error(err); }
   };
 
+  const deleteVendor = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Permanently delete this contract?')) return;
+    try {
+      await fetch(`/checklist/api/vendors/${id}`, { method: 'DELETE' });
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleEdit = (e: React.MouseEvent, data: any, type: 'item' | 'vendor') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(data.id);
+    if (type === 'vendor') {
+      const v = data as Vendor;
+      setVendorForm({
+        vendorName: v.vendorName,
+        contactName: v.contactName || '',
+        email: v.email || '',
+        phone: v.phone || '',
+        contractType: v.contractType || '',
+        expiryDate: v.expiryDate ? new Date(v.expiryDate).toISOString().split('T')[0] : '', // Format for date input
+        note: v.note || ''
+      });
+    } else {
+      const i = data as Item;
+      setItemForm({
+        title: i.title,
+        url: i.url,
+        note: i.note || '',
+        color: i.color || COLORS[0]
+      });
+    }
+    setShowModal(true);
+  };
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setItemForm({ title: '', url: '', note: '', color: COLORS[0] });
+    setVendorForm({ vendorName: '', contactName: '', email: '', phone: '', contractType: '', expiryDate: '', note: '' });
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     try {
-      if (activeTab === 'contract') {
-        await fetch('/checklist/api/vendors', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(vendorForm),
-        });
-        setVendorForm({ vendorName: '', contactName: '', email: '', phone: '', contractType: '', expiryDate: '', note: '' });
-      } else {
-        await fetch('/checklist/api/items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...itemForm,
-            category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
-          }),
-        });
-        setItemForm({ title: '', url: '', note: '', color: COLORS[0] });
-      }
+      const method = editingId ? 'PUT' : 'POST';
+      const endpoint = activeTab === 'contract'
+        ? `/checklist/api/vendors${editingId ? `/${editingId}` : ''}`
+        : `/checklist/api/items${editingId ? `/${editingId}` : ''}`;
+
+      const body = activeTab === 'contract' ? vendorForm : {
+        ...itemForm,
+        category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
+      };
+
+      await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
       setShowModal(false);
       fetchData();
     } catch (err) { console.error(err); }
@@ -102,15 +147,137 @@ export default function App() {
   const filteredItems = items.filter(i => i.title.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredVendors = vendors.filter(v => v.vendorName.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  // Render Table Row
+  const renderItemRow = (item: Item) => (
+    <tr key={item.id} style={{ borderLeft: `4px solid ${item.color || COLORS[0]}` }}>
+      <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</td>
+      <td>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {item.url} <ExternalLink size={14} />
+        </a>
+      </td>
+      <td style={{ color: '#94a3b8' }}>{item.note || '-'}</td>
+      <td>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="icon-btn" onClick={(e) => handleEdit(e, item, 'item')} style={{ color: '#fbbf24' }}>
+            <Edit2 size={18} />
+          </button>
+          <button className="icon-btn" onClick={(e) => deleteItem(e, item.id)} style={{ color: '#ef4444' }}>
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  const renderVendorRow = (v: Vendor) => (
+    <tr key={v.id}>
+      <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{v.vendorName}</td>
+      <td>
+        <span style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}>
+          {v.contractType || '-'}
+        </span>
+      </td>
+      <td style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+        {v.contactName && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><User size={14} /> {v.contactName}</div>}
+        {v.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><Mail size={14} /> {v.email}</div>}
+        {v.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {v.phone}</div>}
+      </td>
+      <td style={{ color: v.expiryDate ? '#fff' : '#94a3b8' }}>
+        {v.expiryDate ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={16} /> {new Date(v.expiryDate).toLocaleDateString()}
+          </div>
+        ) : 'No Expiry'}
+      </td>
+      <td style={{ color: '#94a3b8', fontStyle: 'italic' }}>{v.note || '-'}</td>
+      <td>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="icon-btn" onClick={(e) => handleEdit(e, v, 'vendor')} style={{ color: '#fbbf24' }}>
+            <Edit2 size={18} />
+          </button>
+          <button className="icon-btn" onClick={(e) => deleteVendor(e, v.id)} style={{ color: '#ef4444' }}>
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  // Render Card Grid
+  const renderItemCard = (item: Item) => (
+    <a
+      key={item.id}
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="card"
+      style={{ background: item.color || undefined }}
+    >
+      <div className="card-actions">
+        <button className="icon-btn" onClick={(e) => handleEdit(e, item, 'item')}><Edit2 size={16} /></button>
+        <button className="icon-btn" onClick={(e) => deleteItem(e, item.id)}><Trash2 size={16} /></button>
+      </div>
+      <h3 className="card-title">{item.title}</h3>
+      {item.note && <p className="card-note">{item.note}</p>}
+    </a>
+  );
+
+  const renderVendorCard = (v: Vendor) => (
+    <div key={v.id} className="card" style={{ cursor: 'default' }}>
+      <div className="card-actions">
+        <button className="icon-btn" onClick={(e) => handleEdit(e, v, 'vendor')}><Edit2 size={16} /></button>
+        <button className="icon-btn" onClick={(e) => deleteVendor(e, v.id)}><Trash2 size={16} /></button>
+      </div>
+      <h3 className="card-title" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{v.vendorName}</h3>
+      <div style={{ width: '100%', textAlign: 'left', padding: '0 1rem' }}>
+        <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#60a5fa' }}><strong>Type:</strong> {v.contractType || '-'}</p>
+        <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}><strong>Contact:</strong> {v.contactName || '-'}</p>
+        <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}><strong>Exp:</strong> {v.expiryDate ? new Date(v.expiryDate).toLocaleDateString() : 'None'}</p>
+        {v.note && <p style={{ marginTop: '1rem', fontStyle: 'italic', fontSize: '0.85rem', color: '#94a3b8' }}>{v.note}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <main className="container">
       <header className="header">
         <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           {activeTab === 'monitoring' ? 'System Monitor' : activeTab === 'checklist' ? 'All Check list' : 'Vendor Contracts'}
         </h1>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add New
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <div className="view-toggle" style={{ display: 'flex', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px' }}>
+            <button
+              onClick={() => setViewMode('list')}
+              style={{
+                background: viewMode === 'list' ? '#3b82f6' : 'transparent',
+                color: 'white',
+                border: 'none',
+                padding: '6px',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <ListIcon size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                background: viewMode === 'grid' ? '#3b82f6' : 'transparent',
+                color: 'white',
+                border: 'none',
+                padding: '6px',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <Grid size={20} />
+            </button>
+          </div>
+          <button className="btn btn-primary" onClick={openAddModal}>
+            <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add New
+          </button>
+        </div>
       </header>
 
       <div className="tabs">
@@ -130,97 +297,42 @@ export default function App() {
         />
       </div>
 
-      {activeTab === 'contract' ? (
-        /* VENDOR LIST TABLE */
+      {viewMode === 'list' ? (
         <div className="table-container">
           <table>
             <thead>
-              <tr>
-                <th style={{ width: '20%' }}>Vendor Name</th>
-                <th style={{ width: '20%' }}>Contract Type</th>
-                <th style={{ width: '20%' }}>Contact Info</th>
-                <th style={{ width: '15%' }}>Expiry Date</th>
-                <th style={{ width: '25%' }}>Note</th>
-              </tr>
+              {activeTab === 'contract' ? (
+                <tr>
+                  <th style={{ width: '20%' }}>Vendor Name</th>
+                  <th style={{ width: '15%' }}>Type</th>
+                  <th style={{ width: '25%' }}>Contact Info</th>
+                  <th style={{ width: '15%' }}>Expiry Date</th>
+                  <th style={{ width: '15%' }}>Note</th>
+                  <th style={{ width: '10%' }}>Action</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th style={{ width: '30%' }}>System Name</th>
+                  <th style={{ width: '40%' }}>URL</th>
+                  <th style={{ width: '20%' }}>Note</th>
+                  <th style={{ width: '10%' }}>Action</th>
+                </tr>
+              )}
             </thead>
             <tbody>
-              {filteredVendors.map(v => (
-                <tr key={v.id}>
-                  <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{v.vendorName}</td>
-                  <td>
-                    <span style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}>
-                      {v.contractType || '-'}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                    {v.contactName && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><User size={14} /> {v.contactName}</div>}
-                    {v.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><Mail size={14} /> {v.email}</div>}
-                    {v.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {v.phone}</div>}
-                  </td>
-                  <td style={{ color: v.expiryDate ? '#fff' : '#94a3b8' }}>
-                    {v.expiryDate ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Calendar size={16} /> {new Date(v.expiryDate).toLocaleDateString()}
-                      </div>
-                    ) : 'No Expiry'}
-                  </td>
-                  <td style={{ color: '#94a3b8', fontStyle: 'italic' }}>{v.note || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : activeTab === 'monitoring' ? (
-        /* MONITORING LIST VIEW (New requirement) */
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: '30%' }}>System Name</th>
-                <th style={{ width: '40%' }}>URL</th>
-                <th style={{ width: '20%' }}>Note</th>
-                <th style={{ width: '10%' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map(item => (
-                <tr key={item.id} style={{ borderLeft: `4px solid ${item.color || COLORS[0]}` }}>
-                  <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</td>
-                  <td>
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {item.url} <ExternalLink size={14} />
-                    </a>
-                  </td>
-                  <td style={{ color: '#94a3b8' }}>{item.note || '-'}</td>
-                  <td>
-                    <button className="delete-btn-static" onClick={(e) => deleteItem(e, item.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {activeTab === 'contract'
+                ? filteredVendors.map(renderVendorRow)
+                : filteredItems.map(renderItemRow)
+              }
             </tbody>
           </table>
         </div>
       ) : (
-        /* ALL CHECKLIST GRID VIEW (5 Columns, Tiles) */
         <div className="grid">
-          {filteredItems.map(item => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card"
-              style={{ background: item.color || undefined }} // Apply specific color if set, else fallback to CSS Default
-            >
-              <button className="delete-btn" onClick={(e) => deleteItem(e, item.id)}>
-                <Trash2 size={18} />
-              </button>
-              <h3 className="card-title">{item.title}</h3>
-              {item.note && <p className="card-note">{item.note}</p>}
-            </a>
-          ))}
+          {activeTab === 'contract'
+            ? filteredVendors.map(renderVendorCard)
+            : filteredItems.map(renderItemCard)
+          }
         </div>
       )}
 
@@ -229,7 +341,7 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Add New {activeTab === 'contract' ? 'Vendor' : 'Link'}</h2>
+              <h2 style={{ fontSize: '1.5rem' }}>{editingId ? 'Edit' : 'Add New'} {activeTab === 'contract' ? 'Vendor' : 'Link'}</h2>
               <button className="btn btn-ghost" onClick={() => setShowModal(false)}><X /></button>
             </div>
 

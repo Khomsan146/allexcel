@@ -8,7 +8,7 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { title, url, note, category, status } = body;
+        const { title, url, note, category, status, color } = body;
 
         const updatedItem = await prisma.checklistItem.update({
             where: { id },
@@ -18,6 +18,7 @@ export async function PUT(
                 note,
                 category,
                 status,
+                color,
                 lastChecked: status ? new Date() : undefined,
             },
         });
