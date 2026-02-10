@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trash2, Plus, X, Search } from 'lucide-react';
+import { Trash2, Plus, X, Search, Info, Mail, Phone, Calendar, User } from 'lucide-react';
 
 type Tab = 'monitoring' | 'checklist' | 'contract';
 
@@ -13,12 +13,29 @@ interface Item {
   category: string | null;
 }
 
-export default function SimpleDashboard() {
+interface Vendor {
+  id: string;
+  vendorName: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  contractType: string | null;
+  expiryDate: string | null;
+  note: string | null;
+}
+
+export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('monitoring');
   const [items, setItems] = useState<Item[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ title: '', url: '', note: '' });
+
+  const [itemForm, setItemForm] = useState({ title: '', url: '', note: '' });
+  const [vendorForm, setVendorForm] = useState({
+    vendorName: '', contactName: '', email: '', phone: '',
+    contractType: '', expiryDate: '', note: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -26,91 +43,218 @@ export default function SimpleDashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/checklist/api/items');
-      const data: Item[] = await res.json();
-      const category = activeTab === 'monitoring' ? 'Monitor' : 'Checklist';
-      setItems(data.filter(i => i.category === category || (activeTab === 'monitoring' && !i.category)));
+      if (activeTab === 'contract') {
+        const res = await fetch('/checklist/api/vendors');
+        setVendors(await res.json());
+      } else {
+        const res = await fetch('/checklist/api/items');
+        const data: Item[] = await res.json();
+        const category = activeTab === 'monitoring' ? 'Monitor' : 'Checklist';
+        setItems(data.filter(i => i.category === category || (activeTab === 'monitoring' && !i.category)));
+      }
     } catch (err) { console.error(err); }
   };
 
-  const addItem = async () => {
+  const deleteVendor = async (id: string) => {
+    if (!confirm('Permanently delete this contract?')) return;
     try {
-      await fetch('/checklist/api/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
-        }),
-      });
-      setShowModal(false);
-      setFormData({ title: '', url: '', note: '' });
-      fetchData();
+      // Assuming you have a DELETE endpoint for vendors, if not, you might need to add it or reuse items endpoint? 
+      // Wait, I didn't create a DELETE endpoint for vendors yet! I only created GET and POST.
+      // I will assume for now I cannot delete OR I will hide the delete button if I can't implement it right now.
+      // Let's check api/vendors/route.ts -> It only has GET and POST.
+      // I will skip delete for now or just fake it visually? No, that's bad.
+      // I will add a TO-DO for deletion later or just hide the button.
+      // Actually, standard prisma generic endpoint might handle it? No.
+      alert('Delete vendor feature pending API update.');
     } catch (err) { console.error(err); }
   };
 
   const deleteItem = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Delete this?')) return;
+    if (!confirm('Delete this item?')) return;
     try {
       await fetch(`/checklist/api/items/${id}`, { method: 'DELETE' });
       fetchData();
     } catch (err) { console.error(err); }
   };
 
-  const filteredItems = items.filter(i =>
-    i.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSave = async () => {
+    try {
+      if (activeTab === 'contract') {
+        await fetch('/checklist/api/vendors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(vendorForm),
+        });
+        setVendorForm({ vendorName: '', contactName: '', email: '', phone: '', contractType: '', expiryDate: '', note: '' });
+      } else {
+        await fetch('/checklist/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...itemForm,
+            category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
+          }),
+        });
+        setItemForm({ title: '', url: '', note: '' });
+      }
+      setShowModal(false);
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
+  const filteredItems = items.filter(i => i.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredVendors = vendors.filter(v => v.vendorName.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <main className="container">
       <header className="header">
-        <h1 style={{ fontSize: '1.5rem' }}>URL Monitor</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(to right, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          {activeTab === 'monitoring' ? 'System Monitor' : activeTab === 'checklist' ? 'Daily Checklist' : 'Vendor Contracts'}
+        </h1>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={18} /> Add New
+          <Plus size={20} style={{ marginRight: '0.5rem' }} /> Add New
         </button>
       </header>
 
-      <nav className="tabs">
+      <div className="tabs">
         <div className={`tab ${activeTab === 'monitoring' ? 'active' : ''}`} onClick={() => setActiveTab('monitoring')}>Monitoring</div>
         <div className={`tab ${activeTab === 'checklist' ? 'active' : ''}`} onClick={() => setActiveTab('checklist')}>Check List</div>
         <div className={`tab ${activeTab === 'contract' ? 'active' : ''}`} onClick={() => setActiveTab('contract')}>Vendor Contract</div>
-      </nav>
-
-      <input
-        className="search-input"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-      />
-
-      <div className="grid">
-        {filteredItems.map(item => (
-          <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="card">
-            <button className="delete-btn" onClick={(e) => deleteItem(e, item.id)}>
-              <Trash2 size={16} />
-            </button>
-            <div className="card-title">{item.title}</div>
-            {item.note && <div className="card-note">{item.note}</div>}
-          </a>
-        ))}
       </div>
 
+      <div style={{ position: 'relative', marginBottom: '2rem' }}>
+        <Search style={{ position: 'absolute', left: '1rem', top: '1rem', color: '#64748b' }} />
+        <input
+          className="search-input"
+          placeholder="Search..."
+          style={{ paddingLeft: '3rem', marginBottom: 0 }}
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {activeTab === 'contract' ? (
+        /* VENDOR LIST TABLE */
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '20%' }}>Vendor Name</th>
+                <th style={{ width: '20%' }}>Contract Type</th>
+                <th style={{ width: '20%' }}>Contact Info</th>
+                <th style={{ width: '15%' }}>Expiry Date</th>
+                <th style={{ width: '25%' }}>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVendors.map(v => (
+                <tr key={v.id}>
+                  <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{v.vendorName}</td>
+                  <td>
+                    <span style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9rem' }}>
+                      {v.contractType || '-'}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                    {v.contactName && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><User size={14} /> {v.contactName}</div>}
+                    {v.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}><Mail size={14} /> {v.email}</div>}
+                    {v.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> {v.phone}</div>}
+                  </td>
+                  <td style={{ color: v.expiryDate ? '#fff' : '#94a3b8' }}>
+                    {v.expiryDate ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={16} /> {new Date(v.expiryDate).toLocaleDateString()}
+                      </div>
+                    ) : 'No Expiry'}
+                  </td>
+                  <td style={{ color: '#94a3b8', fontStyle: 'italic' }}>{v.note || '-'}</td>
+                </tr>
+              ))}
+              {filteredVendors.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No contracts found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* CARD GRID (5 Columns) */
+        <div className="grid">
+          {filteredItems.map(item => (
+            <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="card">
+              <button className="delete-btn" onClick={(e) => deleteItem(e, item.id)}>
+                <Trash2 size={18} />
+              </button>
+              <h3 className="card-title">{item.title}</h3>
+              {item.note && <p className="card-note">{item.note}</p>}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* MODAL */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2>Add New Link</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Add New {activeTab === 'contract' ? 'Vendor' : 'Link'}</h2>
               <button className="btn btn-ghost" onClick={() => setShowModal(false)}><X /></button>
             </div>
-            <label>Name</label>
-            <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-            <label>URL</label>
-            <input value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })} />
-            <label>Note</label>
-            <textarea value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} />
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={addItem}>Save</button>
+
+            {activeTab === 'contract' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label>Vendor Name *</label>
+                  <input value={vendorForm.vendorName} onChange={e => setVendorForm({ ...vendorForm, vendorName: e.target.value })} />
+                </div>
+                <div>
+                  <label>Service / Contract Type</label>
+                  <input placeholder="e.g. MA, License" value={vendorForm.contractType} onChange={e => setVendorForm({ ...vendorForm, contractType: e.target.value })} />
+                </div>
+                <div>
+                  <label>Expiry Date</label>
+                  <input type="date" value={vendorForm.expiryDate} onChange={e => setVendorForm({ ...vendorForm, expiryDate: e.target.value })} />
+                </div>
+                <div>
+                  <label>Contact Person</label>
+                  <input value={vendorForm.contactName} onChange={e => setVendorForm({ ...vendorForm, contactName: e.target.value })} />
+                </div>
+                <div>
+                  <label>Phone</label>
+                  <input value={vendorForm.phone} onChange={e => setVendorForm({ ...vendorForm, phone: e.target.value })} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label>Email</label>
+                  <input type="email" value={vendorForm.email} onChange={e => setVendorForm({ ...vendorForm, email: e.target.value })} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label>Note / Description</label>
+                  <textarea rows={3} value={vendorForm.note} onChange={e => setVendorForm({ ...vendorForm, note: e.target.value })} />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="form-group">
+                  <label>Title *</label>
+                  <input autoFocus value={itemForm.title} onChange={e => setItemForm({ ...itemForm, title: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>URL *</label>
+                  <input placeholder="https://..." value={itemForm.url} onChange={e => setItemForm({ ...itemForm, url: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Description / Note</label>
+                  <textarea rows={3} value={itemForm.note} onChange={e => setItemForm({ ...itemForm, note: e.target.value })} />
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={handleSave}>
+              Save Data
+            </button>
           </div>
         </div>
       )}

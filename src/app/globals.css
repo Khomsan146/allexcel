@@ -22,7 +22,8 @@ body {
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1600px;
+  /* Increased to fit 5 cards comfortably */
   margin: 0 auto;
   padding: 2rem;
 }
@@ -68,17 +69,43 @@ body {
   font-size: 1rem;
 }
 
-/* Minimalism Grid */
+/* Minimalism Grid - 5 Columns */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(5, 1fr);
+  /* Force 5 columns */
+  gap: 1.5rem;
+}
+
+/* Responsive for smaller screens */
+@media (max-width: 1400px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card {
   background: var(--card-bg);
-  padding: 2rem 1.5rem;
-  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  border-radius: 16px;
   text-decoration: none;
   color: inherit;
   display: flex;
@@ -88,40 +115,44 @@ body {
   text-align: center;
   position: relative;
   transition: all 0.2s;
-  min-height: 120px;
+  min-height: 180px;
   border: 1px solid transparent;
 }
 
 .card:hover {
   background: var(--card-hover);
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .card-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 2.2rem;
+  /* Extra Large */
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
 }
 
 .card-note {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--text-muted);
   opacity: 0.8;
+  max-width: 90%;
 }
 
 .delete-btn {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: transparent;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.3);
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 8px;
+  border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
 .card:hover .delete-btn {
@@ -130,7 +161,38 @@ body {
 
 .delete-btn:hover {
   color: var(--danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Vendor Table */
+.table-container {
+  background: var(--card-bg);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+td {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+tr:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* Modal & Form */
@@ -140,44 +202,68 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
 .modal {
   background: #1a1b26;
-  padding: 2rem;
-  border-radius: 16px;
+  padding: 2.5rem;
+  border-radius: 20px;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
   color: white;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   border: none;
+  font-size: 1rem;
 }
 
 .btn-primary {
   background: var(--accent);
   color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
 }
 
 .btn-ghost {
