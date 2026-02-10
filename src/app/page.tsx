@@ -1,9 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, Plus, RefreshCw, Settings, FileSpreadsheet, Trash2, CheckCircle, XCircle, AlertCircle, Search } from 'lucide-react';
+import {
+  ExternalLink, Plus, RefreshCw, Search,
+  ShieldCheck, FileCheck, Users, Trash2,
+  X, Mail, Phone, Calendar, Info
+} from 'lucide-react';
 
-interface ChecklistItem {
+type Tab = 'monitoring' | 'checklist' | 'contract';
+
+interface Item {
   id: string;
   title: string;
   url: string;
@@ -13,26 +19,48 @@ interface ChecklistItem {
   lastChecked: string | null;
 }
 
-export default function ChecklistPage() {
-  const [items, setItems] = useState<ChecklistItem[]>([]);
+interface Vendor {
+  id: string;
+  vendorName: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  contractType: string | null;
+  expiryDate: string | null;
+  note: string | null;
+}
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('monitoring');
+  const [items, setItems] = useState<Item[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({ title: '', url: '', note: '', category: 'General' });
+  const [showModal, setShowModal] = useState(false);
+
+  // Forms data
+  const [linkForm, setLinkForm] = useState({ title: '', url: '', note: '' });
+  const [vendorForm, setVendorForm] = useState({
+    vendorName: '', contactName: '', email: '', phone: '',
+    contractType: '', expiryDate: '', note: ''
+  });
 
   useEffect(() => {
-    fetchItems();
-  }, []);
+    fetchData();
+  }, [activeTab]);
 
-  const fetchItems = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      // Health check
-      await fetch('/checklist/api/check', { method: 'POST' }).catch(e => console.error(e));
-
-      const res = await fetch('/checklist/api/items');
-      const data = await res.json();
-      setItems(data);
+      if (activeTab === 'contract') {
+        const res = await fetch('/checklist/api/vendors');
+        setVendors(await res.json());
+      } else {
+        const category = activeTab === 'monitoring' ? 'Monitor' : 'Checklist';
+        const res = await fetch('/checklist/api/items');
+        const data: Item[] = await res.json();
+        setItems(data.filter(i => i.category === category || (activeTab === 'monitoring' && !i.category)));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -40,206 +68,216 @@ export default function ChecklistPage() {
     }
   };
 
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddLink = async () => {
     try {
-      const res = await fetch('/checklist/api/items', {
+      await fetch('/checklist/api/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...linkForm,
+          category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
+        }),
       });
-      if (res.ok) {
-        setFormData({ title: '', url: '', note: '', category: 'General' });
-        fetchItems();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+      setShowModal(false);
+      setLinkForm({ title: '', url: '', note: '' });
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
-  const deleteItem = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+  const handleAddVendor = async () => {
     try {
-      await fetch(`/checklist/api/items/${id}`, { method: 'DELETE' });
-      fetchItems();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setLoading(true);
-    try {
-      const res = await fetch('/checklist/api/upload', {
+      await fetch('/checklist/api/vendors', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorForm),
       });
-      if (res.ok) {
-        fetchItems();
-        alert('Items imported successfully!');
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setShowModal(false);
+      setVendorForm({
+        vendorName: '', contactName: '', email: '', phone: '',
+        contractType: '', expiryDate: '', note: ''
+      });
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
-  const filteredItems = items.filter(item =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredItems = items.filter(i =>
+    i.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.note && i.note.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredVendors = vendors.filter(v =>
+    v.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.contactName && v.contactName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
     <main className="container">
+      {/* Header */}
       <header className="header">
-        <div>
-          <h1 className="title">System URL Monitor</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Checklist monitoring and management console</p>
+        <div className="title-group">
+          <h1>All Check List</h1>
+          <p style={{ color: 'var(--text-muted)' }}>Excel Checklist Dashboard</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className={`btn ${isAdmin ? 'btn-primary' : 'btn-outline'}`} onClick={() => setIsAdmin(!isAdmin)}>
-            <Settings size={18} />
-            {isAdmin ? 'Admin Mode' : 'View Mode'}
-          </button>
-          <button className="btn btn-primary" onClick={fetchItems} disabled={loading}>
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            Check Now
-          </button>
-        </div>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <Plus size={20} /> Add {activeTab === 'contract' ? 'Vendor' : 'Link'}
+        </button>
       </header>
 
-      {isAdmin && (
-        <div className="admin-panel">
-          <div className="admin-section">
-            <h3>Add New Link</h3>
-            <form onSubmit={handleAddItem}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  placeholder="Website Name"
-                  value={formData.title}
-                  onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-                <input
-                  placeholder="URL (https://...)"
-                  value={formData.url}
-                  onChange={e => setFormData({ ...formData, url: e.target.value })}
-                  required
-                />
-              </div>
-              <textarea
-                placeholder="Notes / Description..."
-                value={formData.note}
-                onChange={e => setFormData({ ...formData, note: e.target.value })}
-                rows={2}
-              />
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                <Plus size={18} /> Add to List
-              </button>
-            </form>
-          </div>
-          <div className="admin-section">
-            <h3>Import From Excel</h3>
-            <div className="upload-box">
-              <input
-                type="file"
-                id="excel-upload"
-                accept=".xlsx, .xls"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="excel-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <FileSpreadsheet size={32} style={{ marginBottom: '0.5rem' }} />
-                <span style={{ fontWeight: '500' }}>Upload .xlsx File</span>
-                <span style={{ fontSize: '0.8rem' }}>Columns: Title, URL, Note</span>
-              </label>
-            </div>
-          </div>
+      {/* Tabs */}
+      <nav className="tabs">
+        <div className={`tab ${activeTab === 'monitoring' ? 'active' : ''}`} onClick={() => setActiveTab('monitoring')}>
+          <ShieldCheck size={18} style={{ marginInlineEnd: '8px' }} /> Monitoring
         </div>
-      )}
+        <div className={`tab ${activeTab === 'checklist' ? 'active' : ''}`} onClick={() => setActiveTab('checklist')}>
+          <FileCheck size={18} style={{ marginInlineEnd: '8px' }} /> Check List
+        </div>
+        <div className={`tab ${activeTab === 'contract' ? 'active' : ''}`} onClick={() => setActiveTab('contract')}>
+          <Users size={18} style={{ marginInlineEnd: '8px' }} /> Contract Vendor
+        </div>
+      </nav>
 
-      {/* Search Bar */}
-      <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-        <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+      {/* Search */}
+      <div className="search-container">
+        <Search className="search-icon" style={{ position: 'absolute', left: '1.25rem', top: '1.1rem', color: 'var(--text-muted)' }} />
         <input
-          style={{ paddingLeft: '3rem', margin: 0 }}
-          placeholder="Search links or categories..."
+          className="search-input"
+          placeholder={`Search ${activeTab === 'contract' ? 'vendors' : 'links'}...`}
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: '40px' }}>#</th>
-              <th>System Name</th>
-              <th>Status</th>
-              <th>URL</th>
-              <th>Notes</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((item, idx) => (
-              <tr key={item.id}>
-                <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                <td>
-                  <div style={{ fontWeight: 600 }}>{item.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.category || 'General'}</div>
-                </td>
-                <td>
-                  <span className={`badge badge-${item.status}`}>
-                    {item.status === 'OK' && <CheckCircle size={12} style={{ marginRight: '4px' }} />}
-                    {item.status === 'Error' && <XCircle size={12} style={{ marginRight: '4px' }} />}
-                    {item.status === 'Unknown' && <AlertCircle size={12} style={{ marginRight: '4px' }} />}
-                    {item.status}
-                  </span>
-                </td>
-                <td>
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }} className="truncate">
-                    {item.url}
-                  </a>
-                </td>
-                <td>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.note || '-'}</span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ padding: '0.4rem' }}>
-                      <ExternalLink size={16} />
-                    </a>
-                    {isAdmin && (
-                      <button className="btn btn-outline" onClick={() => deleteItem(item.id)} style={{ padding: '0.4rem', color: '#dc2626' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredItems.length === 0 && (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '100px', color: 'var(--text-muted)' }}>Loading...</div>
+      ) : activeTab === 'contract' ? (
+        /* VENDOR CONTRACT TABLE */
+        <div className="table-container">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                  No items found. {isAdmin ? 'Add some links above!' : ''}
-                </td>
+                <th>Vendor</th>
+                <th>Contact Name</th>
+                <th>Email / Phone</th>
+                <th>Type</th>
+                <th>Expiry Date</th>
+                <th>Note</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredVendors.map(v => (
+                <tr key={v.id}>
+                  <td style={{ fontWeight: 700 }}>{v.vendorName}</td>
+                  <td>{v.contactName || '-'}</td>
+                  <td>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={12} /> {v.email || '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={12} /> {v.phone || '-'}</div>
+                    </div>
+                  </td>
+                  <td><span className="status-pill status-OK">{v.contractType || 'N/A'}</span></td>
+                  <td>{v.expiryDate ? new Date(v.expiryDate).toLocaleDateString() : 'No Limit'}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{v.note || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* MONITORING & CHECKLIST GRID */
+        <div className="grid">
+          <div className="card card-add" onClick={() => setShowModal(true)}>
+            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '15px', borderRadius: '50%', marginBottom: '10px' }}>
+              <Plus size={32} />
+            </div>
+            <p style={{ fontWeight: 700 }}>Add New</p>
+          </div>
+          {filteredItems.map(item => (
+            <div key={item.id} className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{item.title}</h3>
+                <span className={`status-pill status-${item.status}`}>{item.status}</span>
+              </div>
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{item.url}</p>
+              {item.note && (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <Info size={14} style={{ display: 'inline', marginInlineEnd: '4px' }} /> {item.note}
+                </div>
+              )}
+              <div style={{ marginTop: 'auto', display: 'flex', gap: '10px' }}>
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                  <ExternalLink size={16} /> Open Link
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-        Last sync: {new Date().toLocaleString()}
-      </div>
-    </main >
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2>Add New {activeTab === 'contract' ? 'Vendor' : 'Link'}</h2>
+              <button className="btn btn-ghost" onClick={() => setShowModal(false)}><X /></button>
+            </div>
+
+            {activeTab === 'contract' ? (
+              <>
+                <div className="form-group">
+                  <label>Vendor Name</label>
+                  <input value={vendorForm.vendorName} onChange={e => setVendorForm({ ...vendorForm, vendorName: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label>Contact Person</label>
+                    <input value={vendorForm.contactName} onChange={e => setVendorForm({ ...vendorForm, contactName: e.target.value })} />
+                  </div>
+                  <div>
+                    <label>Contract Type</label>
+                    <input value={vendorForm.contractType} onChange={e => setVendorForm({ ...vendorForm, contractType: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label>Email</label>
+                    <input type="email" value={vendorForm.email} onChange={e => setVendorForm({ ...vendorForm, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label>Phone</label>
+                    <input value={vendorForm.phone} onChange={e => setVendorForm({ ...vendorForm, phone: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Expiry Date</label>
+                  <input type="date" value={vendorForm.expiryDate} onChange={e => setVendorForm({ ...vendorForm, expiryDate: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Note</label>
+                  <textarea value={vendorForm.note} onChange={e => setVendorForm({ ...vendorForm, note: e.target.value })} />
+                </div>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAddVendor}>Save Contract</button>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Title</label>
+                  <input value={linkForm.title} onChange={e => setLinkForm({ ...linkForm, title: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>URL</label>
+                  <input value={linkForm.url} onChange={e => setLinkForm({ ...linkForm, url: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Note</label>
+                  <textarea value={linkForm.note} onChange={e => setLinkForm({ ...linkForm, note: e.target.value })} />
+                </div>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAddLink}>Save Link</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

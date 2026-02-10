@@ -15,9 +15,22 @@ model ChecklistItem {
   title       String
   url         String
   note        String?
-  category    String?  @default("General")
+  category    String?  @default("Monitor") // Monitor, Checklist, etc.
   status      String   @default("Unknown")
   lastChecked DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model VendorContract {
+  id           String   @id @default(cuid())
+  vendorName   String
+  contactName  String?
+  email        String?
+  phone        String?
+  contractType String?
+  expiryDate   DateTime?
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
