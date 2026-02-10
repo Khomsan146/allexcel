@@ -45,7 +45,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
         - name: link-dashboard
-          image: ghcr.io/khomsan146/allexcel:1.1
+          image: ghcr.io/khomsan146/allexcel:1.2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
