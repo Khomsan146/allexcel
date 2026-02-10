@@ -23,19 +23,21 @@ spec:
       labels:
         app: link-dashboard
     spec:
+      securityContext:
+        fsGroup: 2000
       containers:
         - name: link-dashboard
           # Using GitHub Container Registry
-          image: ghcr.io/khomsan146/allexcel:latest
+          image: ghcr.io/khomsan146/allexcel:1.2
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
-            - name: DB_PATH
-              value: "/data/links.db"
+            - name: DATABASE_URL
+              value: "file:/app/data/checklist.db"
           volumeMounts:
             - name: data-volume
-              mountPath: "/data"
+              mountPath: "/app/data"
       # Uncomment if your repo is Private
       # imagePullSecrets:
       #   - name: ghcr-secret
@@ -67,8 +69,8 @@ spec:
   rules:
     - http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /checklist
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: link-dashboard-svc
