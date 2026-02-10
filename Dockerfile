@@ -1,40 +1,31 @@
 # Build stage
 FROM node:20-alpine AS builder
-
 WORKDIR /app
-
-# Install dependencies for Prisma and Build
 COPY package*.json ./
 COPY prisma ./prisma/
-
 RUN npm install
-
-# Copy source code
 COPY . .
-
-# Generate Prisma Client and Build
 RUN npx prisma generate
 RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
-
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Copy necessary files from builder
+# Copy necessary files
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/data ./data
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
 
-# Ensure data directory exists for SQLite
-RUN mkdir -p /app/data
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chmod 777 /app/data && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["npm", "start"]
