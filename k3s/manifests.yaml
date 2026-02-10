@@ -63,11 +63,12 @@ kind: Ingress
 metadata:
   name: link-dashboard-ingress
   annotations:
-    konghq.com/strip-path: "true" # Common Kong annotation, adjust if needed
+    konghq.com/strip-path: "ture" # Common Kong annotation, adjust if needed
 spec:
   ingressClassName: kong
   rules:
-    - http:
+    - host: monitor.tfac.or.th
+      http:
         paths:
           - path: /checklist
             pathType: ImplementationSpecific
