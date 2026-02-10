@@ -118,7 +118,7 @@ spec:
     - host: monitorlist.tfac.or.th
       http:
         paths:
-          - path:
+          - path: /
             pathType: Prefix
             backend:
               service:
