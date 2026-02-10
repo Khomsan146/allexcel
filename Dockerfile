@@ -1,30 +1,40 @@
-FROM node:18-alpine AS builder
+# Build stage
+FROM node:20-alpine AS builder
 
-WORKDIR /app/client
-COPY client/package*.json ./
+WORKDIR /app
+
+# Install dependencies for Prisma and Build
+COPY package*.json ./
+COPY prisma ./prisma/
+
 RUN npm install
-COPY client/ ./
+
+# Copy source code
+COPY . .
+
+# Generate Prisma Client and Build
+RUN npx prisma generate
 RUN npm run build
 
-FROM node:18-alpine
+# Production stage
+FROM node:20-alpine AS runner
 
-WORKDIR /app/server
-COPY server/package*.json ./
-RUN npm install --production
+WORKDIR /app
 
-COPY server/ ./
-# Copy built frontend to the expected location
-COPY --from=builder /app/client/dist ../client/dist
-
-# Env
 ENV NODE_ENV=production
-ENV PORT=3000
-# Default DB path (can be overridden by K3s PVC)
-ENV DB_PATH=/data/links.db
+
+# Copy necessary files from builder
+COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/data ./data
+
+# Ensure data directory exists for SQLite
+RUN mkdir -p /app/data
 
 EXPOSE 3000
 
-# Ensure DB directory exists
-RUN mkdir -p /data
-
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
