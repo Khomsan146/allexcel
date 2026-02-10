@@ -17,6 +17,7 @@ model ChecklistItem {
   note        String?
   category    String?  @default("Monitor") // Monitor, Checklist, etc.
   status      String   @default("Unknown")
+  color       String?  @default("#1e293b") // Default dark blue/slate
   lastChecked DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

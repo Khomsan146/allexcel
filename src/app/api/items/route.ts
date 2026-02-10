@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { title, url, note, category } = body;
+        const { title, url, note, category, color } = body;
 
         if (!title || !url) {
             return NextResponse.json({ error: 'Title and URL are required' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
                 note,
                 category: category || 'General',
                 status: 'Unknown',
+                color: color || '#1e293b',
             },
         });
 

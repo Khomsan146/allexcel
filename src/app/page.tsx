@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trash2, Plus, X, Search, Info, Mail, Phone, Calendar, User } from 'lucide-react';
+import { Trash2, Plus, X, Search, User, Mail, Phone, Calendar, ExternalLink } from 'lucide-react';
 
 type Tab = 'monitoring' | 'checklist' | 'contract';
 
@@ -11,6 +11,7 @@ interface Item {
   url: string;
   note: string | null;
   category: string | null;
+  color: string | null;
 }
 
 interface Vendor {
@@ -24,6 +25,14 @@ interface Vendor {
   note: string | null;
 }
 
+const COLORS = [
+  '#1e293b', // Default Slate
+  '#1e3a8a', // Dark Blue
+  '#064e3b', // Dark Green
+  '#7f1d1d', // Dark Red
+  '#581c87', // Dark Purple
+];
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('monitoring');
   const [items, setItems] = useState<Item[]>([]);
@@ -31,7 +40,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
 
-  const [itemForm, setItemForm] = useState({ title: '', url: '', note: '' });
+  const [itemForm, setItemForm] = useState({ title: '', url: '', note: '', color: COLORS[0] });
   const [vendorForm, setVendorForm] = useState({
     vendorName: '', contactName: '', email: '', phone: '',
     contractType: '', expiryDate: '', note: ''
@@ -52,20 +61,6 @@ export default function App() {
         const category = activeTab === 'monitoring' ? 'Monitor' : 'Checklist';
         setItems(data.filter(i => i.category === category || (activeTab === 'monitoring' && !i.category)));
       }
-    } catch (err) { console.error(err); }
-  };
-
-  const deleteVendor = async (id: string) => {
-    if (!confirm('Permanently delete this contract?')) return;
-    try {
-      // Assuming you have a DELETE endpoint for vendors, if not, you might need to add it or reuse items endpoint? 
-      // Wait, I didn't create a DELETE endpoint for vendors yet! I only created GET and POST.
-      // I will assume for now I cannot delete OR I will hide the delete button if I can't implement it right now.
-      // Let's check api/vendors/route.ts -> It only has GET and POST.
-      // I will skip delete for now or just fake it visually? No, that's bad.
-      // I will add a TO-DO for deletion later or just hide the button.
-      // Actually, standard prisma generic endpoint might handle it? No.
-      alert('Delete vendor feature pending API update.');
     } catch (err) { console.error(err); }
   };
 
@@ -97,7 +92,7 @@ export default function App() {
             category: activeTab === 'monitoring' ? 'Monitor' : 'Checklist'
           }),
         });
-        setItemForm({ title: '', url: '', note: '' });
+        setItemForm({ title: '', url: '', note: '', color: COLORS[0] });
       }
       setShowModal(false);
       fetchData();
@@ -172,19 +167,53 @@ export default function App() {
                   <td style={{ color: '#94a3b8', fontStyle: 'italic' }}>{v.note || '-'}</td>
                 </tr>
               ))}
-              {filteredVendors.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No contracts found.</td>
+            </tbody>
+          </table>
+        </div>
+      ) : activeTab === 'monitoring' ? (
+        /* MONITORING LIST VIEW (New requirement) */
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '30%' }}>System Name</th>
+                <th style={{ width: '40%' }}>URL</th>
+                <th style={{ width: '20%' }}>Note</th>
+                <th style={{ width: '10%' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.map(item => (
+                <tr key={item.id} style={{ borderLeft: `4px solid ${item.color || COLORS[0]}` }}>
+                  <td style={{ fontWeight: 700, fontSize: '1.1rem' }}>{item.title}</td>
+                  <td>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {item.url} <ExternalLink size={14} />
+                    </a>
+                  </td>
+                  <td style={{ color: '#94a3b8' }}>{item.note || '-'}</td>
+                  <td>
+                    <button className="delete-btn-static" onClick={(e) => deleteItem(e, item.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       ) : (
-        /* CARD GRID (5 Columns) */
+        /* ALL CHECKLIST GRID VIEW (5 Columns, Tiles) */
         <div className="grid">
           {filteredItems.map(item => (
-            <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="card">
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card"
+              style={{ background: item.color || undefined }} // Apply specific color if set, else fallback to CSS Default
+            >
               <button className="delete-btn" onClick={(e) => deleteItem(e, item.id)}>
                 <Trash2 size={18} />
               </button>
@@ -248,6 +277,26 @@ export default function App() {
                 <div className="form-group">
                   <label>Description / Note</label>
                   <textarea rows={3} value={itemForm.note} onChange={e => setItemForm({ ...itemForm, note: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Background Color</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {COLORS.map(color => (
+                      <div
+                        key={color}
+                        onClick={() => setItemForm({ ...itemForm, color })}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: color,
+                          cursor: 'pointer',
+                          border: itemForm.color === color ? '3px solid white' : '2px solid transparent',
+                          boxShadow: itemForm.color === color ? '0 0 10px rgba(255,255,255,0.5)' : 'none'
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
