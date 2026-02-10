@@ -107,14 +107,18 @@ metadata:
   name: link-dashboard-ingress
   namespace: infra-list
   annotations:
-    konghq.com/strip-path: "true"
+    konghq.com/strip-path: 'true'
+    kubernetes.io/ingress.class: kong
+    konghq.com/protocols: 'https'
+    konghq.com/https-redirect-status-code: '301'
+    konghq.com/force-ssl-redirect: 'true'
 spec:
   ingressClassName: kong
   rules:
-    - host: monitor.tfac.or.th
+    - host: monitorlist.tfac.or.th
       http:
         paths:
-          - path: /checklist
+          - path:
             pathType: Prefix
             backend:
               service:
