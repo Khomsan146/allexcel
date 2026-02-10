@@ -12,6 +12,8 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Set default database URL for the container
+ENV DATABASE_URL="file:/app/data/checklist.db"
 
 # Copy necessary files
 COPY --from=builder /app/next.config.ts ./
